@@ -4,6 +4,7 @@ import android.Manifest;
 import android.annotation.TargetApi;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.media.MediaRecorder;
 import android.os.Build;
 import android.os.Bundle;
 import android.speech.RecognitionListener;
@@ -17,6 +18,7 @@ import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Locale;
 
@@ -26,6 +28,8 @@ public class Activity4 extends AppCompatActivity implements RecognitionListener 
     private SpeechRecognizer speech = null;
     private Intent recognizerIntent;
     private String LOG_TAG = "VoiceRecognitionActivity";
+    private MediaRecorder recorder = null;
+    private static String fileName = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,6 +44,11 @@ public class Activity4 extends AppCompatActivity implements RecognitionListener 
     }
 
     public void start() {
+        recorder = new MediaRecorder();
+        fileName = getExternalCacheDir().getAbsolutePath();
+        fileName += "/audiorecordtest.3gp";
+        Log.d("Record", fileName);
+
         returnedText = (TextView) findViewById(R.id.textView1);
         progressBar = (ProgressBar) findViewById(R.id.progressBar1);
         Button recordbtn = (Button) findViewById(R.id.btn_record);
@@ -66,6 +75,7 @@ public class Activity4 extends AppCompatActivity implements RecognitionListener 
             public void onClick(View v) {
                 progressBar.setVisibility(View.VISIBLE);
                 progressBar.setIndeterminate(true);
+                startRecording();
                 speech.startListening(recognizerIntent);
             }
         });
@@ -75,6 +85,7 @@ public class Activity4 extends AppCompatActivity implements RecognitionListener 
             public void onClick(View v) {
                 progressBar.setIndeterminate(false);
                 progressBar.setVisibility(View.INVISIBLE);
+                stopRecording();
                 speech.stopListening();
             }
         });
@@ -100,7 +111,10 @@ public class Activity4 extends AppCompatActivity implements RecognitionListener 
             speech.destroy();
             Log.i(LOG_TAG, "destroy");
         }
-
+        if (recorder != null) {
+            recorder.release();
+            recorder = null;
+        }
     }
 
     @Override
@@ -209,5 +223,27 @@ public class Activity4 extends AppCompatActivity implements RecognitionListener 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             requestPermissions(permissions, requestCode);
         }
+    }
+
+    private void startRecording() {
+        recorder = new MediaRecorder();
+        recorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+        recorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
+        recorder.setOutputFile(fileName);
+        recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
+
+        try {
+            recorder.prepare();
+        } catch (IOException e) {
+            Log.e(LOG_TAG, "prepare() failed");
+        }
+
+        recorder.start();
+    }
+
+    private void stopRecording() {
+        recorder.stop();
+        recorder.release();
+        recorder = null;
     }
 }
