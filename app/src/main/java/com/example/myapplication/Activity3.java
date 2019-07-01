@@ -1,17 +1,23 @@
 package com.example.myapplication;
 
 
+import android.content.ContentResolver;
 import android.content.Intent;
+import android.media.MediaRecorder;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.speech.RecognizerIntent;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.TextView;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Locale;
 
@@ -69,7 +75,6 @@ public class Activity3 extends AppCompatActivity {
                 }
                 break;
             }
-
         }
     }
 
