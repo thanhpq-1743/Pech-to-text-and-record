@@ -2,21 +2,27 @@ package com.example.myapplication;
 
 
 import android.content.ContentResolver;
+import android.content.Context;
+import android.content.ContextWrapper;
 import android.content.Intent;
 import android.media.MediaRecorder;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
+import android.speech.SpeechRecognizer;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
+import android.webkit.MimeTypeMap;
 import android.widget.ImageButton;
 import android.widget.TextView;
 
+import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.IOException;
+import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Locale;
@@ -26,6 +32,8 @@ public class Activity3 extends AppCompatActivity {
     private static final int REQ_CODE_SPEECH_INPUT = 100;
     private TextView mVoiceInputTv;
     private ImageButton mSpeakBtn;
+    private SpeechRecognizer speech = null;
+    private String LOG_TAG = "VoiceRecognitionActivity";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,13 +54,28 @@ public class Activity3 extends AppCompatActivity {
     }
 
     private void startVoiceInput() {
+        /*speech = SpeechRecognizer.createSpeechRecognizer(this);
+        speech.setRecognitionListener(this);*/
+
         Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+        intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault());
         intent.putExtra(RecognizerIntent.EXTRA_PROMPT, "Hello, How can I help you?");
+        intent.putExtra("android.speech.extra.GET_AUDIO_FORMAT", "audio/AMR");
+        intent.putExtra("android.speech.extra.GET_AUDIO", true);
+        //speech.startListening(intent);
         startActivityForResult(intent, REQ_CODE_SPEECH_INPUT);
-        startService(new Intent(Activity3.this, FloatWindowService.class));
+        Intent serviceIntent = new Intent(Activity3.this, FloatWindowService.class);
+        serviceIntent.putExtra("text", "大学では、JavaとかPHPとかを勉強していました。\n" +
+                "どうぞよろしくお願いします。");
+        startService(serviceIntent);
+    }
 
+    @Override
+    protected void onStop() {
+        super.onStop();
+        stopService(new Intent(Activity3.this, FloatWindowService.class));
     }
 
     @Override
@@ -64,14 +87,29 @@ public class Activity3 extends AppCompatActivity {
                 if (resultCode == RESULT_OK && null != data) {
                     ArrayList<String> result = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
                     mVoiceInputTv.setText(result.get(0));
-//                    Uri audioUri = data.getData();
-//                    ContentResolver contentResolver = getContentResolver();
-//                    try {
-//                        InputStream filestream = contentResolver.openInputStream(audioUri);
-//                        // TODO: read audio file from inputstream
-//                    } catch (FileNotFoundException e) {
-//                        e.printStackTrace();
-//                    }
+                    Uri audioUri = data.getData();
+                    ContentResolver contentResolver = getContentResolver();
+                    try {
+                        InputStream filestream = contentResolver.openInputStream(audioUri);
+                        ContextWrapper cw = new ContextWrapper(this);
+                        File directory = cw.getDir("audio", Context.MODE_PRIVATE);
+                        String extension = MimeTypeMap.getSingleton().getExtensionFromMimeType(contentResolver.getType(audioUri));
+                        Log.d("Record", extension);
+                        File mypath = new File(directory, "thanh." + extension);
+                        FileOutputStream fos = new FileOutputStream(mypath);
+                        byte[] data2 = new byte[1024];
+                        int count = filestream.read(data2);
+                        while (count!=-1){
+                            fos.write(data2,0,count);
+                            count = filestream.read(data2);
+                        }
+                        fos.flush();
+                        fos.close();
+                        filestream.close();
+                        // TODO: read audio file from inputstream
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
                 }
                 break;
             }

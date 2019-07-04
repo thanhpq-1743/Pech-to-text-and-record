@@ -2,12 +2,18 @@ package com.example.myapplication;
 
 import android.Manifest;
 import android.annotation.TargetApi;
+import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
+import android.content.pm.ServiceInfo;
 import android.media.MediaRecorder;
 import android.os.Build;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.speech.RecognitionListener;
+import android.speech.RecognitionService;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
 import android.support.annotation.NonNull;
@@ -20,7 +26,10 @@ import android.widget.TextView;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
+
+import static android.content.pm.PackageManager.MATCH_ALL;
 
 public class Activity4 extends AppCompatActivity implements RecognitionListener {
     private TextView returnedText;
@@ -75,7 +84,9 @@ public class Activity4 extends AppCompatActivity implements RecognitionListener 
             public void onClick(View v) {
                 progressBar.setVisibility(View.VISIBLE);
                 progressBar.setIndeterminate(true);
-                startRecording();
+                //startRecording();
+                String name = detectDefaultSpeechRecognizer(getApplicationContext());
+                Log.d("Record", name);
                 speech.startListening(recognizerIntent);
             }
         });
@@ -85,10 +96,31 @@ public class Activity4 extends AppCompatActivity implements RecognitionListener 
             public void onClick(View v) {
                 progressBar.setIndeterminate(false);
                 progressBar.setVisibility(View.INVISIBLE);
-                stopRecording();
+                //stopRecording();
                 speech.stopListening();
             }
         });
+    }
+
+    String detectDefaultSpeechRecognizer(Context context) {
+        final Intent speechIntent = new Intent(RecognitionService.SERVICE_INTERFACE);
+        // 1: Try to find the default speech intent
+        final List<ResolveInfo> t = context.getPackageManager().queryIntentServices(speechIntent, MATCH_ALL);
+        final ResolveInfo defaultResolution = context.getPackageManager().resolveService(speechIntent, MATCH_ALL);
+        if (defaultResolution != null) {
+            final ServiceInfo activity = defaultResolution.serviceInfo;
+            if (!activity.name.equals("com.android.internal.app.ResolverActivity")) {
+                //ResolverActivity was launched so there is no default speech recognizer
+                return activity.name;
+            }
+        }
+
+        final List<ResolveInfo> resolveInfoList = context.getPackageManager().queryIntentServices(speechIntent, MATCH_ALL);
+        if (!resolveInfoList.isEmpty()) {
+            speechIntent.setClassName(resolveInfoList.get(0).serviceInfo.packageName, resolveInfoList.get(0).activityInfo.name);
+            return resolveInfoList.get(0).serviceInfo.packageName;
+        }
+        return "";
     }
 
     @Override
